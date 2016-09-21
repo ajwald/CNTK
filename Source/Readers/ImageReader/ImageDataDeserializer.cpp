@@ -16,6 +16,7 @@
 #include "TimerUtility.h"
 #include "ImageTransformers.h"
 #include "SequenceData.h"
+#include "ImageUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -83,22 +84,7 @@ public:
             RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
 
         // Convert element type.
-        auto depth = cvImage.depth();
-        ElementType dataType;
-        if (depth == CV_8U)
-            dataType = ElementType::tuchar;
-        else if (depth == CV_32F)
-            dataType = ElementType::tfloat;
-        else if (depth == CV_64F)
-            dataType = ElementType::tdouble;
-        else
-        {
-            // Natively unsupported image type. Let's convert it to required precision.
-            int requiredType = m_parent.m_precision == ElementType::tfloat ? CV_32F : CV_64F;
-            cvImage.convertTo(cvImage, requiredType);
-            dataType = m_parent.m_precision;
-        }
-
+        ElementType dataType = ConvertImageToSupportedDataType(cvImage);
         if (!cvImage.isContinuous())
             cvImage = cvImage.clone();
         assert(cvImage.isContinuous());
@@ -116,6 +102,21 @@ public:
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
         label->m_numberOfSamples = 1;
         result.push_back(label);
+    }
+
+private:
+    ElementType ConvertImageToSupportedDataType(cv::Mat& image)
+    {
+        ElementType resultType;
+        if (!IdentifyElementTypeFromOpenCVType(image.depth(), resultType))
+        {
+            // Could not identify element type.
+            // Natively unsupported image type. Let's convert it to required precision.
+            int requiredType = m_parent.m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+            image.convertTo(image, requiredType);
+            resultType = m_parent.m_precision;
+        }
+        return resultType;
     }
 };
 

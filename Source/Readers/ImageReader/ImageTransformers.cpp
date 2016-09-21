@@ -13,28 +13,11 @@
 #include "Config.h"
 #include "ConcStack.h"
 #include "StringUtil.h"
-#include "ElementTypeUtils.h"
 #include "SequenceData.h"
+#include "ImageUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK 
 {
-
-ElementType GetElementTypeFromOpenCV(int type)
-{
-    switch (type)
-    {
-    case CV_64F:
-        return ElementType::tdouble;
-    case CV_32F:
-        return ElementType::tfloat;
-    case CV_8U:
-        return ElementType::tuchar;
-    default:
-        RuntimeError("Unsupported OpenCV type '%d'", (int)type);
-    }
-
-    return ElementType::tvariant;// Make compiler happy.
-}
 
 // Transforms a single sequence as open cv dense image. Called once per sequence.
 SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
@@ -48,7 +31,7 @@ SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
 
     result->m_image = inputSequence->m_image;
     result->m_numberOfSamples = inputSequence->m_numberOfSamples;
-    result->m_elementType = GetElementTypeFromOpenCV(inputSequence->m_image.depth());
+    result->m_elementType = GetElementTypeFromOpenCVType(inputSequence->m_image.depth());
 
     ImageDimensions outputDimensions(inputSequence->m_image.cols, inputSequence->m_image.rows, inputSequence->m_image.channels());
     result->m_sampleLayout = std::make_shared<TensorShape>(outputDimensions.AsTensorShape(HWC));
@@ -312,12 +295,8 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
     // will only lower its sharpness.
     if (mat.cols != m_imgWidth || mat.rows != m_imgHeight)
     {
-        // If matrix has not been converted to the right type, do it now as rescaling
-        // requires floating point type.
-        int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
-
-        if (mat.type() != CV_MAKETYPE(type, m_imgChannels))
-            mat.convertTo(mat, type);
+        // If matrix has not been converted to the right type, do it now as rescaling requires floating point type.
+        ConvertToFloatingPointIfRequired(mat);
         cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp[index]);
     }
 
@@ -363,12 +342,8 @@ void MeanTransformer::Apply(size_t id, cv::Mat &mat)
 
     if (m_meanImg.size() == mat.size())
     {
-        // If matrix has not been converted to the right type, do it now as rescaling
-        // requires floating point type.
-        int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
-        if (mat.type() != type)
-            mat.convertTo(mat, type);
-
+        // If matrix has not been converted to the right type, do it now as maen requires floating point type.
+        ConvertToFloatingPointIfRequired(mat);
         mat = mat - m_meanImg;
     }
 }
@@ -610,9 +585,7 @@ void ColorTransformer::Apply(size_t id, cv::Mat &mat)
         return;
 
     // Have to convert to float
-    int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
-    if (mat.type() != type)
-        mat.convertTo(mat, type);
+    ConvertToFloatingPointIfRequired(mat);
 
     if (mat.type() == CV_64FC(mat.channels()))
         Apply<double>(mat);

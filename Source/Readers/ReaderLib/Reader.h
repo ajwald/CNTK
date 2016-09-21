@@ -36,13 +36,12 @@ struct EpochConfiguration
 // Supported primitive element types, will be extended in the future.
 enum class ElementType
 {
-    tvariant,// used by stream definition if deserializer can expose sequences of different type
-             // before the sequence enters the network there should be some transform that 
-             // cast all sequences from the stream to the same type.
+    tvariant,// Used by stream definition if deserializer can expose sequences of different type.
+             // Before the sequence enters the network there should be a transform that
+             // cast all sequences from such stream to the same type (i.e. tdouble or tfloat).
     tfloat,  // single precision
     tdouble, // double precision
     tuchar,  // unsigned char
-    tatom    // sizeof(atom) == 1 constitute of blobs -> sequences of atoms (i.e. used for lattices, hmmm, etc.)
 };
 
 // Supported storage types, will be extended in the future.

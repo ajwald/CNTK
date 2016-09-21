@@ -30,6 +30,7 @@ struct ImageSequenceData : DenseSequenceData
         {
             // According to the contract, dense sequence data 
             // should return continuous data buffer.
+            // TODO: This is potentially an expensive operation. Need to do some logging.
             m_image = m_image.clone();
         }
 
@@ -54,6 +55,19 @@ protected:
     using Base = Transformer;
     using UniRealT = boost::random::uniform_real_distribution<double>;
     using UniIntT = boost::random::uniform_int_distribution<int>;
+
+    int ExpectedOpenCVPrecision() const
+    {
+        assert(m_precision == ElementType::tfloat || m_precision == ElementType::tdouble);
+        return m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+    }
+
+    void ConvertToFloatingPointIfRequired(cv::Mat& image)
+    {
+        int depth = ExpectedOpenCVPrecision();
+        if (image.depth() != depth)
+            image.convertTo(image, depth);
+    }
 
     // The only function that should be redefined by the inherited classes.
     virtual void Apply(size_t id, cv::Mat &from) = 0;
@@ -215,7 +229,7 @@ private:
 
 // Cast the input to a particular type.
 // Images coming from the deserializer/transformers could come in different types,
-// i.e. as a uchar dur to performance reasons. On the other hand, the packer/network
+// i.e. as a uchar due to performance reasons. On the other hand, the packer/network
 // currently only supports float and double. This transform is necessary to do a proper
 // casting before the sequence data enters the packer.
 class CastTransformer : public TransformBase

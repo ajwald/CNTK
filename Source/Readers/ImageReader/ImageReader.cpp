@@ -73,7 +73,7 @@ ImageReader::ImageReader(const ConfigParameters& config)
     }
 
     // We should always have cast at the end. 
-    // It is noop if the matrix elemnt type is already expected by the packer.
+    // It is noop if the matrix element type is already expected by the packer.
     transformations.push_back(Transformation{ std::make_shared<CastTransformer>(featureStream), featureName });
 
     m_sequenceEnumerator = std::make_shared<TransformController>(transformations, randomizer);

@@ -14,6 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Class represents a sparse sequence for category data.
     // m_data is a non-owning pointer to some staticlly allocated category.
+    // TOOD: Possibly introduce typed data here.
     struct CategorySequenceData : SparseSequenceData
     {
         const void* GetDataBuffer() override
