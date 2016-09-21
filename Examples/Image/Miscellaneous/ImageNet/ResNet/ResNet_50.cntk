@@ -1,11 +1,11 @@
-# Node: This sample uses the BrainScriptBuilder
+# Node: This ResNet-50 sample uses the BrainScriptBuilder
 #
 
-command = trainNetwork： postBatchNormal: testNetwork
+command = train:pbn:createEval:test
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "." ; configDir = "$RootDir$" ; dataDir = "$RootDir$" ;
+rootDir = "." ; configDir = "$RootDir$" ; dataDir = "C:\\Data\\Data\\ImageNet_2012_CNTK" ;
 outputDir = "$rootDir$/Output" ;
 
 modelPath = "$outputDir$/Models/ResNet_50"
@@ -14,7 +14,7 @@ stderr = "$outputDir$/ResNet_50_BS_out"
 parallelTrain = "true"
 
 # TRAINING CONFIG
-trainNetwork = {
+train = {
     action = "train"
 
     BrainScriptNetworkBuilder = {
@@ -108,7 +108,7 @@ trainNetwork = {
         }
     }
 
-    reader = {
+    reader={
         readerType="ImageReader"
         file="$DataDir$/train_map.txt"
         randomize="Auto"
@@ -136,15 +136,16 @@ trainNetwork = {
     }
 }
 
-# PBN CONFIG
-postBatchNormal = {
-    action = "pbn"
+pbn={
+    action="pbn"
+    modelPath="$modelPath$"
+    # Set minibatch size for testing.
+    minibatchSize=256
+    iters=30
 
-    modelPath = "$modelPath$/ResNet_50"
-    minibatchSize = 256
-    iters = 30
+    useDistributedMBReading=true
 
-    reader = {
+    reader={
         readerType="ImageReader"
         file="$DataDir$/train_map.txt"
         randomize="Auto"
@@ -172,27 +173,35 @@ postBatchNormal = {
     }
 }
 
-# TEST CONFIG
-testNetwork = {
-    action = "test"
+createEval={   
+    action="edit"
+    CurModel="$modelPath$.PBN"
+    NewModel="$modelPath$.Eval"
+    editPath="$ConfigDir$/CreateBSEvalModel.mel"
+}
 
-    modelPath = "$ModelDir$/ResNet_50.PBN"
-    minibatchSize = 200
+test={
+    action="test"
+    modelPath="$modelPath$.Eval"
+    # Set minibatch size for testing.
+    minibatchSize=100
 
-    reader = {
-        readerType = "ImageReader"
-        file = "$DataDir$/val_map.txt"
-        randomize = "None"
-        features = {
-            width = 224
-            height = 224
-            channels = 3
-            cropType = "Center"
-            cropRatio = 0.875
-            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+    useDistributedMBReading=true
+
+    reader={
+        readerType="ImageReader"
+        file="$DataDir$/val_map.txt"
+        randomize="None"
+        features={
+            width=224
+            height=224
+            channels=3
+            cropType="Center"
+            cropRatio=0.875
+            meanFile="$ConfigDir$/ImageNet1K_mean.xml"
         }
         labels={
             labelDim=1000
         }
-    }
+    }    
 }
